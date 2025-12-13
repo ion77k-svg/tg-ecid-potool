@@ -2,10 +2,10 @@ import telebot
 import sqlite3
 from datetime import datetime
 
-TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
+TOKEN = "ТУТ_ТОКЕН"
 
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook(drop_pending_updates=True)  # 🔥 ВАЖНО
+bot.remove_webhook()  # 🔥 просто убираем аргумент
 
 conn = sqlite3.connect("ecid.db", check_same_thread=False)
 cursor = conn.cursor()
