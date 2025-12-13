@@ -2,7 +2,7 @@ import telebot
 import sqlite3
 from datetime import datetime
 
-TOKEN = "ТУТ_ТОКЕН"
+TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 
 bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook()  # 🔥 просто убираем аргумент
