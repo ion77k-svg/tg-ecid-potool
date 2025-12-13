@@ -2,7 +2,7 @@ import telebot
 import sqlite3
 from datetime import datetime
 
-TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_ОТ_BOTFATHER"
+TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 
 bot = telebot.TeleBot(TOKEN)
 
