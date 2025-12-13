@@ -3,12 +3,12 @@ import sqlite3
 from datetime import datetime, timedelta
 
 TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
-GROUP_ID = -1003159585382  # Только эта группа разрешена
-OWNER_USERNAME = "pounlock"  # Твой Telegram ник
+GROUP_ID = -1003159585382  
+OWNER_USERNAME = "pounlock" 
 
 bot = telebot.TeleBot(TOKEN)
 
-# Подключение к базе данных
+
 conn = sqlite3.connect("ecid.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -33,7 +33,7 @@ def reply(message, text):
 
 def can_register(user_id, username):
     if username == OWNER_USERNAME:
-        return True  # владелец безлимит
+        return True  
     cursor.execute(
         "SELECT registered_at FROM ecid_log WHERE user_id = ? ORDER BY registered_at DESC LIMIT 1",
         (user_id,)
@@ -48,12 +48,12 @@ def can_register(user_id, username):
 def start(message):
     reply(message, (
         "🎉 Welcome to HG Tools!\n"
-        "Version 1.0 is now live!\n"
-        "✅ Fully compatible with Windows\n"
-        "✅ Supports A12+ devices with iOS 15 through iOS 26.1\n"
-        "✅ Automatically blocks OTA updates\n"
-        "💰 It's Full Free\n"
-        "📩 Please contact an admin if you have problems!\n"
+        "Version 1.0 is now live!
+        "✅ Fully compatible with Windows
+        "✅ Supports A12+ devices with iOS 15 through iOS 26.1
+        "✅ Automatically blocks OTA updates
+        "💰 It's Full Free
+        "📩 Please contact an admin if you have problems!
         "Download Links: /download"
     ))
 
@@ -72,27 +72,27 @@ def help_cmd(message):
 def register(message):
     # Проверка чата
     if message.chat.id != GROUP_ID:
-        reply(message, "❌ Регистрация возможна только в группе!")
+        reply(message, "❌ U not allowed to register here!")
         return
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        reply(message, "❌ Формат:\n`/register <ECID>`")
+        reply(message, "❌ Format:\n`/register <ECID>`")
         return
 
     ecid = parts[1].strip()
     user_id = message.from_user.id
     username = message.from_user.username or ""
 
-    # Проверка на существующий ECID
+    
     cursor.execute("SELECT ecid FROM ecid_log WHERE user_id = ?", (user_id,))
     if cursor.fetchone():
-        reply(message, "⚠️ ECID уже зарегистрирован")
+        reply(message, "⚠️ ECID already registered")
         return
 
-    # Ограничение по времени
+   
     if not can_register(user_id, username):
-        reply(message, "⏳ Можно регистрировать только 1 ECID каждые 24 часа")
+        reply(message, "⏳ U can register only 1 ECID per Day")
         return
 
     cursor.execute(
@@ -100,13 +100,13 @@ def register(message):
         (user_id, username, ecid, datetime.now().isoformat())
     )
     conn.commit()
-    reply(message, f"✅ ECID `{ecid}` зарегистрирован.")
+    reply(message, f"✅ ECID `{ecid}` succesfuly registered.")
 
 @bot.message_handler(commands=['check'])
 def check_ecid(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        reply(message, "❌ Формат:\n`/check <ECID>`")
+        reply(message, "❌ Format:\n`/check <ECID>`")
         return
 
     ecid = parts[1].strip()
@@ -114,9 +114,9 @@ def check_ecid(message):
     row = cursor.fetchone()
     if row:
         username, registered_at = row
-        reply(message, f"🔎 ECID `{ecid}` зарегистрирован пользователем @{username} в {registered_at}")
+        reply(message, f"🔎 ECID `{ecid}` already registered")
     else:
-        reply(message, f"❌ ECID `{ecid}` не найден в базе")
+        reply(message, f"❌ ECID `{ecid}` is not registered")
 
 @bot.message_handler(commands=['download'])
 def download(message):
