@@ -5,7 +5,7 @@ from datetime import datetime
 TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()  # 🔥 просто убираем аргумент
+bot.remove_webhook()  
 
 conn = sqlite3.connect("ecid.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -31,7 +31,14 @@ def reply(message, text):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    reply(message, "Добро пожаловать!\nНапиши /help")
+    reply(message, "🎉 Welcome to HG Tools! /n
+ Version 1.0 is now live!
+✅ Fully compatible with Windows
+✅ Supports A12+ devices with iOS 15 through iOS 26.1
+✅ Automatically blocks OTA updates
+💰 Its Full Free
+📩 Please contact an admin is u have problems!
+Donwload Links: /download")
 
 @bot.message_handler(commands=['help'])
 def help_cmd(message):
@@ -47,7 +54,7 @@ def help_cmd(message):
 def register(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        reply(message, "❌ Формат:\n`/register <ECID>`")
+        reply(message, "❌ Format:\n`/register <ECID>`")
         return
 
     ecid = parts[1].strip()
@@ -56,7 +63,7 @@ def register(message):
 
     cursor.execute("SELECT ecid FROM ecid_log WHERE user_id = ?", (user_id,))
     if cursor.fetchone():
-        reply(message, "⚠️ ECID уже зарегистрирован.")
+        reply(message, "⚠️ ECID already registered")
         return
 
     cursor.execute(
@@ -65,7 +72,7 @@ def register(message):
     )
     conn.commit()
 
-    reply(message, f"✅ ECID `{ecid}` сохранён.")
+    reply(message, f"✅ ECID `{ecid}` registered.")
 
 @bot.message_handler(commands=['download'])
 def download(message):
