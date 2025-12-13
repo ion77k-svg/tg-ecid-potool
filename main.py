@@ -69,6 +69,6 @@ def register(message):
 
 @bot.message_handler(commands=['download'])
 def download(message):
-    reply(message, "📥 Download link:\n👉 https://www.chatgpt.com")
+    reply(message, "📥 Download link:\n👉 https://www.mediafire.com/file/sgw0wxk4fn6xgb8/PO+Tools+A12+.zip/file")
 
 bot.polling(none_stop=True)
