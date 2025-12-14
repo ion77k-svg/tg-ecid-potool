@@ -104,7 +104,7 @@ def register(message):
 
     # ---------- Проверка формата ECID ----------
     if not re.fullmatch(r"[0-9A-F]{16,20}", ecid):
-        bot.reply_to(message, "❌ Invalid ECID format! Only hex digits (0-9, A-F), length 16-20.")
+        bot.reply_to(message, "❌ Invalid ECID format! Only Hex digit")
         return
 
     user = message.from_user
