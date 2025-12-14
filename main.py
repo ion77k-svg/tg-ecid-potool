@@ -3,36 +3,33 @@ import requests
 import re
 import urllib3
 
+# -------------------- Настройки --------------------
 TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
 bot = telebot.TeleBot(TOKEN)
 
-# ---------- Отключаем предупреждения SSL ----------
+# -------------------- SSL --------------------
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ---------- PHP API ----------
+# -------------------- PHP API --------------------
 ADD_ECID_URL = "https://vanciu.atwebpages.com/add_ecid.php"
 CHECK_ECID_URL = "https://vanciu.atwebpages.com/check_ecid.php"
 
-# ---------- ЭКРАНИРОВАНИЕ SPECIAL CHARACTERS ДЛЯ MARKDOWN ----------
+# -------------------- Экранирование Markdown --------------------
 def escape_markdown(text):
     if not text:
         return ""
     escape_chars = r'_*[]()~`>#+-=|{}.!'
     return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
 
-# ---------- Функции работы с API ----------
+# -------------------- Работа с API --------------------
 def add_ecid(ecid, user_id, is_admin=False):
     try:
         r = requests.get(
             ADD_ECID_URL,
-            params={
-                "ecid": ecid,
-                "user_id": user_id,
-                "admin": "1" if is_admin else "0"
-            },
+            params={"ecid": ecid, "user_id": user_id, "admin": "1" if is_admin else "0"},
             timeout=10,
             verify=False
         )
@@ -52,7 +49,7 @@ def check_ecid(ecid):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# ---------- NEW USER ----------
+# -------------------- NEW USER --------------------
 @bot.message_handler(content_types=["new_chat_members"])
 def welcome(message):
     for user in message.new_chat_members:
@@ -60,7 +57,7 @@ def welcome(message):
         bot.send_message(
             message.chat.id,
             f"*{escape_markdown(name)}* 👋\n\n"
-            "🎉 Welcome to HG Tools!\n\n"
+            "🎉 Welcome to HG Tools!\n"
             "Version 1.0 is now live!\n"
             "✅ Fully compatible with Windows\n"
             "✅ Supports A12+ devices with iOS 15 through iOS 26.1\n"
@@ -71,7 +68,7 @@ def welcome(message):
             parse_mode="Markdown"
         )
 
-# ---------- HELP ----------
+# -------------------- HELP --------------------
 @bot.message_handler(commands=["help"])
 def help_cmd(message):
     name = message.from_user.first_name or "User"
@@ -86,7 +83,7 @@ def help_cmd(message):
         parse_mode="Markdown"
     )
 
-# ---------- REGISTER ----------
+# -------------------- REGISTER --------------------
 @bot.message_handler(commands=["register"])
 def register(message):
     if message.chat.id != GROUP_ID:
@@ -117,7 +114,7 @@ def register(message):
     else:
         bot.reply_to(message, f"❌ Unknown status: {message_text}")
 
-# ---------- CHECK ----------
+# -------------------- CHECK --------------------
 @bot.message_handler(commands=["check"])
 def check(message):
     if message.chat.id != GROUP_ID:
@@ -141,7 +138,7 @@ def check(message):
     else:
         bot.reply_to(message, f"❌ ECID `{escape_markdown(ecid)}` not found")
 
-# ---------- DOWNLOAD ----------
+# -------------------- DOWNLOAD --------------------
 @bot.message_handler(commands=["download"])
 def download(message):
     bot.reply_to(
