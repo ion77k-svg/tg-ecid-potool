@@ -84,9 +84,11 @@ def help_cmd(message):
         parse_mode="Markdown"
     )
 
+import re
+
 # -------------------- REGISTER --------------------
 last_register_time = {}  # user_id -> timestamp
-COOLDOWN = 24 * 60 * 60  # 24 часа в секундах
+COOLDOWN = 24 * 60 * 60  # 24 часа
 
 @bot.message_handler(commands=["register"])
 def register(message):
@@ -99,6 +101,12 @@ def register(message):
         return
 
     ecid = parts[1].strip().upper()
+
+    # ---------- Проверка формата ECID ----------
+    if not re.fullmatch(r"[0-9A-F]{16,20}", ecid):
+        bot.reply_to(message, "❌ Invalid ECID format! Only hex digits (0-9, A-F), length 16-20.")
+        return
+
     user = message.from_user
     user_id = user.id
     is_admin = (user.username or "").lower() == ADMIN_USERNAME.lower()
@@ -113,12 +121,7 @@ def register(message):
             hours = int(remaining // 3600)
             minutes = int((remaining % 3600) // 60)
             seconds = int(remaining % 60)
-            # Красивый Markdown вывод
-            bot.reply_to(
-                message, 
-                f"⏳ You can register a new ECID in **{hours}h {minutes}m {seconds}s**",
-                parse_mode="Markdown"
-            )
+            bot.reply_to(message, f"⏳ You can register a new ECID in **{hours}h {minutes}m {seconds}s**", parse_mode="Markdown")
             return
 
     # ---------- Регистрируем ECID ----------
@@ -129,7 +132,7 @@ def register(message):
     if status == "success":
         bot.reply_to(message, f"✅ Registered {escape_markdown(ecid)} succesfully!", parse_mode="Markdown")
         if not is_admin:
-            last_register_time[user_id] = now  # обновляем лимит
+            last_register_time[user_id] = now
     elif status == "exists":
         bot.reply_to(message, f"⚠️ ECID already Registered!", parse_mode="Markdown")
     elif status == "limit":
@@ -138,6 +141,7 @@ def register(message):
         bot.reply_to(message, f"❌ Registration error: {message_text}", parse_mode="Markdown")
     else:
         bot.reply_to(message, f"❌ Unknown status: {message_text}", parse_mode="Markdown")
+
 
 # -------------------- CHECK --------------------
 @bot.message_handler(commands=["check"])
