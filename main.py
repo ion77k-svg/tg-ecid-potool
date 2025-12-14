@@ -1,7 +1,7 @@
 import telebot
 import requests
 
-TOKEN = "ТВОЙ_BOT_TOKEN"
+TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
