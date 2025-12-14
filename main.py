@@ -1,17 +1,29 @@
 import telebot
 import requests
+import re
+import urllib3
 
-TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
+TOKEN = "ТВОЙ_BOT_TOKEN"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
-bot = telebot.TeleBot(TOKEN)  # Без parse_mode, будем указывать отдельно при необходимости
+bot = telebot.TeleBot(TOKEN)
+
+# ---------- Отключаем предупреждения SSL ----------
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ---------- PHP API ----------
 ADD_ECID_URL = "https://vanciu.atwebpages.com/add_ecid.php"
 CHECK_ECID_URL = "https://vanciu.atwebpages.com/check_ecid.php"
 
+# ---------- ЭКРАНИРОВАНИЕ SPECIAL CHARACTERS ДЛЯ MARKDOWN ----------
+def escape_markdown(text):
+    if not text:
+        return ""
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
 
+# ---------- Функции работы с API ----------
 def add_ecid(ecid, user_id, is_admin=False):
     try:
         r = requests.get(
@@ -21,30 +33,24 @@ def add_ecid(ecid, user_id, is_admin=False):
                 "user_id": user_id,
                 "admin": "1" if is_admin else "0"
             },
-            timeout=10
+            timeout=10,
+            verify=False
         )
         return r.json()
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-
 def check_ecid(ecid):
     try:
-        r = requests.get(CHECK_ECID_URL, params={"ecid": ecid}, timeout=10)
+        r = requests.get(
+            CHECK_ECID_URL,
+            params={"ecid": ecid},
+            timeout=10,
+            verify=False
+        )
         return r.json()
     except Exception as e:
         return {"status": "error", "message": str(e)}
-
-
-# ---------- ФУНКЦИЯ ЭКРАНИРОВАНИЯ SPECIAL CHARACTERS ДЛЯ MARKDOWN ----------
-import re
-
-def escape_markdown(text):
-    if not text:
-        return ""
-    escape_chars = r'_*[]()~`>#+-=|{}.!'
-    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
-
 
 # ---------- NEW USER ----------
 @bot.message_handler(content_types=["new_chat_members"])
@@ -65,7 +71,6 @@ def welcome(message):
             parse_mode="Markdown"
         )
 
-
 # ---------- HELP ----------
 @bot.message_handler(commands=["help"])
 def help_cmd(message):
@@ -80,7 +85,6 @@ def help_cmd(message):
         "• `/help`",
         parse_mode="Markdown"
     )
-
 
 # ---------- REGISTER ----------
 @bot.message_handler(commands=["register"])
@@ -113,7 +117,6 @@ def register(message):
     else:
         bot.reply_to(message, f"❌ Unknown status: {message_text}")
 
-
 # ---------- CHECK ----------
 @bot.message_handler(commands=["check"])
 def check(message):
@@ -138,7 +141,6 @@ def check(message):
     else:
         bot.reply_to(message, f"❌ ECID `{escape_markdown(ecid)}` not found")
 
-
 # ---------- DOWNLOAD ----------
 @bot.message_handler(commands=["download"])
 def download(message):
@@ -147,6 +149,5 @@ def download(message):
         "📥 Download link:\n"
         "👉 https://www.mediafire.com/file/sgw0wxk4fn6xgb8/PO+Tools+A12+.zip/file"
     )
-
 
 bot.polling(none_stop=True)
