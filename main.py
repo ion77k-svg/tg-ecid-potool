@@ -108,7 +108,7 @@ def register(message):
     elif status == "exists":
         bot.reply_to(message, f"⚠️ ECID already Registered!")
     elif status == "limit":
-        bot.reply_to(message, f"⏳ U can Regiser **1 ECID per Day**")
+        bot.reply_to(message, f"⏳ You can register 1 Ecid in 24H")
     elif status == "error":
         bot.reply_to(message, f"❌ Registration error: {message_text}")
     else:
@@ -132,11 +132,11 @@ def check(message):
     message_text = escape_markdown(result.get("message", ""))
 
     if status == "exists":
-        bot.reply_to(message, f"✅ ECID `{escape_markdown(ecid)}` is registered")
+        bot.reply_to(message, f"✅ Ecid {escape_markdown(ecid)} already registered")
     elif status == "error":
         bot.reply_to(message, f"❌ Server error: {message_text}")
     else:
-        bot.reply_to(message, f"❌ ECID `{escape_markdown(ecid)}` not found")
+        bot.reply_to(message, f"❌ Ecid `{escape_markdown(ecid)}` not registered")
 
 # -------------------- DOWNLOAD --------------------
 @bot.message_handler(commands=["download"])
@@ -144,7 +144,7 @@ def download(message):
     bot.reply_to(
         message,
         "📥 Download link:\n"
-        "👉 https://www.mediafire.com/file/sgw0b8/PO+Tools+A12+.zip/file"
+        "👉 App Will Released Soon 🕰️"
     )
 
 bot.polling(none_stop=True)
