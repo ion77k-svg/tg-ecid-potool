@@ -104,11 +104,11 @@ def register(message):
     message_text = escape_markdown(result.get("message", "Unknown error"))
 
     if status == "success":
-        bot.reply_to(message, f"✅ ECID `{escape_markdown(ecid)}` registered")
+        bot.reply_to(message, f"✅ Registered {escape_markdown(ecid)} succesfully!")
     elif status == "exists":
-        bot.reply_to(message, f"⚠️ {message_text}")
+        bot.reply_to(message, f"⚠️ ECID already Registered!")
     elif status == "limit":
-        bot.reply_to(message, f"⏳ {message_text}")
+        bot.reply_to(message, f"⏳ U can Regiser **1 ECID per Day**")
     elif status == "error":
         bot.reply_to(message, f"❌ Registration error: {message_text}")
     else:
