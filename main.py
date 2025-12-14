@@ -144,7 +144,7 @@ def download(message):
     bot.reply_to(
         message,
         "📥 Download link:\n"
-        "👉 https://www.mediafire.com/file/sgw0wxk4fn6xgb8/PO+Tools+A12+.zip/file"
+        "👉 https://www.mediafire.com/file/sgw0b8/PO+Tools+A12+.zip/file"
     )
 
 bot.polling(none_stop=True)
