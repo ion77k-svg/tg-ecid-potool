@@ -1,7 +1,7 @@
 import telebot
 import requests
 
-TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
+TOKEN = "ТВОЙ_BOT_TOKEN"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
@@ -24,16 +24,16 @@ def add_ecid(ecid, user_id, is_admin=False):
             timeout=10
         )
         return r.json()
-    except:
-        return {"status": "error"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 def check_ecid(ecid):
     try:
         r = requests.get(CHECK_ECID_URL, params={"ecid": ecid}, timeout=10)
         return r.json()
-    except:
-        return {"status": "error"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 # ---------- NEW USER ----------
@@ -87,14 +87,20 @@ def register(message):
 
     result = add_ecid(ecid, user.id, is_admin)
 
-    if result["status"] == "success":
+    # ---------- Используем подробное сообщение сервера ----------
+    status = result.get("status", "error")
+    message_text = result.get("message", "Unknown error")
+
+    if status == "success":
         bot.reply_to(message, f"✅ ECID `{ecid}` registered")
-    elif result["status"] == "exists":
-        bot.reply_to(message, f"⚠️ ECID `{ecid}` already registered")
-    elif result["status"] == "limit":
-        bot.reply_to(message, "⏳ Limit reached: 1 ECID per 24 hours")
+    elif status == "exists":
+        bot.reply_to(message, f"⚠️ {message_text}")
+    elif status == "limit":
+        bot.reply_to(message, f"⏳ {message_text}")
+    elif status == "error":
+        bot.reply_to(message, f"❌ Registration error: {message_text}")
     else:
-        bot.reply_to(message, "❌ Registration error")
+        bot.reply_to(message, f"❌ Unknown status: {message_text}")
 
 
 # ---------- CHECK ----------
@@ -111,10 +117,15 @@ def check(message):
     ecid = parts[1].strip().upper()
     result = check_ecid(ecid)
 
-    if result["status"] == "exists":
+    status = result.get("status", "error")
+    message_text = result.get("message", "")
+
+    if status == "exists":
         bot.reply_to(message, f"✅ ECID `{ecid}` is registered")
+    elif status == "error":
+        bot.reply_to(message, f"❌ Server error: {message_text}")
     else:
-        bot.reply_to(message, f"❌ ECID `{ecid}` not registered")
+        bot.reply_to(message, f"❌ ECID `{ecid}` not found")
 
 
 # ---------- DOWNLOAD ----------
