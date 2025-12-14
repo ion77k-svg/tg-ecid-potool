@@ -1,210 +1,146 @@
 import telebot
-import sqlite3
-from datetime import datetime, timedelta
+import requests
+import time
 
-TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
+TOKEN = "ТВОЙ_BOT_TOKEN"
 GROUP_ID = -1003159585382
-OWNER_USERNAME = "pounlock"
+ADMIN_USERNAME = "pounlock"
 
-bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()
+bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
 
-# ================= DATABASE =================
-conn = sqlite3.connect("ecid.db", check_same_thread=False)
-cursor = conn.cursor()
+# ---------- PHP API ----------
+ADD_ECID_URL = "https://vanciu.atwebpages.com/add_ecid.php"
+CHECK_ECID_URL = "https://vanciu.atwebpages.com/check_ecid.php"
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS ecids (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ecid TEXT UNIQUE,
-    registered_at TEXT
-)
-""")
+# ---------- ЛИМИТ 24 ЧАСА ----------
+REGISTER_COOLDOWN = 24 * 60 * 60  # 24 часа
+last_register_time = {}  # user_id -> timestamp
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
-    last_register TEXT
-)
-""")
 
-conn.commit()
+def add_ecid(ecid):
+    r = requests.get(ADD_ECID_URL, params={"ecid": ecid}, timeout=10)
+    return r.json()
 
-# ================= HELPERS =================
-def is_owner(message):
-    return message.from_user.username == OWNER_USERNAME
 
-def in_group(message):
-    return message.chat.id == GROUP_ID
+def check_ecid(ecid):
+    r = requests.get(CHECK_ECID_URL, params={"ecid": ecid}, timeout=10)
+    return r.json()
 
-def safe_reply(chat_id, text, message_id=None, parse_mode=None):
-    try:
-        bot.send_message(
-            chat_id,
-            text,
-            reply_to_message_id=message_id,
-            parse_mode=parse_mode
-        )
-    except Exception:
-        bot.send_message(
-            chat_id,
-            text,
-            parse_mode=parse_mode
-        )
 
-# ================= WELCOME =================
-@bot.message_handler(content_types=['new_chat_members'])
+# ---------- Новый пользователь ----------
+@bot.message_handler(content_types=["new_chat_members"])
 def welcome(message):
-    if not in_group(message):
-        return
-
     for user in message.new_chat_members:
         name = user.first_name or "User"
-
         bot.send_message(
             message.chat.id,
-            f"""🎉 Welcome to HG Tools, *{name}*! 👋
-
-Version 1.0 is now live!
-✅ Fully compatible with Windows
-✅ Supports A12+ devices with iOS 15 through iOS 26.1
-✅ Automatically blocks OTA updates
-💰 Its Full Free
-📩 Please contact an admin if you have problems!
-
-Download Links: /download
-""",
-            parse_mode="Markdown"
+            f"*{name}* 👋\n\n"
+            "🎉 Welcome to HG Tools!\n\n"
+            "Version 1.0 is now live!\n"
+            "✅ Fully compatible with Windows\n"
+            "✅ Supports A12+ devices with iOS 15 through iOS 26.1\n"
+            "✅ Automatically blocks OTA updates\n"
+            "💰 Its Full Free\n"
+            "📩 Please contact an admin if you have problems!\n\n"
+            "Download Links: /download"
         )
 
-# ================= HELP =================
-@bot.message_handler(commands=['help'])
+
+# ---------- HELP (с именем) ----------
+@bot.message_handler(commands=["help"])
 def help_cmd(message):
-    if not in_group(message):
-        return
-
     name = message.from_user.first_name or "User"
-
     bot.send_message(
         message.chat.id,
-        f"""👋 *{name}*
-
-🖐 Bot commands:
-
-• Register ECID:
-`/register <ECID>`
-
-• Check ECID:
-`/check <ECID>`
-
-• Download:
-`/download`
-""",
-        parse_mode="Markdown"
+        f"*{name}* 👋\n\n"
+        "📌 *Bot Commands*\n\n"
+        "• `/register ECID`\n"
+        "• `/check ECID`\n"
+        "• `/download`\n"
+        "• `/help`"
     )
 
-# ================= REGISTER =================
-@bot.message_handler(commands=['register'])
+
+# ---------- REGISTER ----------
+@bot.message_handler(commands=["register"])
 def register(message):
-    if not in_group(message):
+    if message.chat.id != GROUP_ID:
         return
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        safe_reply(
-            message.chat.id,
-            "❌ Format:\n`/register <ECID>`",
-            message.message_id,
-            parse_mode="Markdown"
-        )
+        bot.reply_to(message, "❌ Format:\n`/register ECID`")
         return
 
-    ecid = parts[1].strip()
+    ecid = parts[1].strip().upper()
     user_id = message.from_user.id
+    username = message.from_user.username or ""
 
-    # 24h limit (except owner)
-    if not is_owner(message):
-        cursor.execute("SELECT last_register FROM users WHERE user_id=?", (user_id,))
-        row = cursor.fetchone()
-        if row:
-            last_time = datetime.fromisoformat(row[0])
-            if datetime.now() - last_time < timedelta(hours=24):
-                safe_reply(
-                    message.chat.id,
-                    "⏳ U can register only **1 ECID per 24 hours**.",
-                    message.message_id,
-                    parse_mode="Markdown"
-                )
-                return
+    # --- ЛИМИТ (кроме создателя) ---
+    if username.lower() != ADMIN_USERNAME.lower():
+        now = time.time()
+        last_time = last_register_time.get(user_id)
 
-    # duplicate ECID check
-    cursor.execute("SELECT ecid FROM ecids WHERE ecid=?", (ecid,))
-    if cursor.fetchone():
-        safe_reply(
-            message.chat.id,
-            "⚠️ This ECID is already registered.",
-            message.message_id
-        )
+        if last_time and now - last_time < REGISTER_COOLDOWN:
+            remaining = int((REGISTER_COOLDOWN - (now - last_time)) / 3600)
+            bot.reply_to(
+                message,
+                f"⏳ You can register ECID again in ~{remaining} hour(s)"
+            )
+            return
+
+    # --- PHP регистрация ---
+    try:
+        result = add_ecid(ecid)
+    except:
+        bot.reply_to(message, "❌ Server error. Try later.")
         return
 
-    # insert ECID
-    cursor.execute(
-        "INSERT INTO ecids (ecid, registered_at) VALUES (?, ?)",
-        (ecid, datetime.now().isoformat())
-    )
+    if result["status"] == "success":
+        last_register_time[user_id] = time.time()
+        bot.reply_to(message, f"✅ ECID `{ecid}` registered")
 
-    cursor.execute(
-        "INSERT OR REPLACE INTO users (user_id, last_register) VALUES (?, ?)",
-        (user_id, datetime.now().isoformat())
-    )
+    elif result["status"] == "exists":
+        bot.reply_to(message, f"⚠️ ECID `{ecid}` already registered")
 
-    conn.commit()
+    else:
+        bot.reply_to(message, "❌ Error registering ECID")
 
-    safe_reply(
-        message.chat.id,
-        f"✅ Registered `{ecid}` successfully!",
-        message.message_id,
-        parse_mode="Markdown"
-    )
 
-# ================= CHECK =================
-@bot.message_handler(commands=['check'])
-def check_ecid(message):
-    if not in_group(message):
+# ---------- CHECK ----------
+@bot.message_handler(commands=["check"])
+def check(message):
+    if message.chat.id != GROUP_ID:
         return
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        safe_reply(
-            message.chat.id,
-            "❌ Format:\n`/check <ECID>`",
-            message.message_id,
-            parse_mode="Markdown"
-        )
+        bot.reply_to(message, "❌ Format:\n`/check ECID`")
         return
 
-    ecid = parts[1].strip()
+    ecid = parts[1].strip().upper()
 
-    cursor.execute("SELECT ecid FROM ecids WHERE ecid=?", (ecid,))
-    exists = cursor.fetchone() is not None
+    try:
+        result = check_ecid(ecid)
+    except:
+        bot.reply_to(message, "❌ Server error")
+        return
 
-    safe_reply(
-        message.chat.id,
-        "✅ ECID is registered." if exists else "❌ ECID not registered.",
-        message.message_id
-    )
+    if result["status"] == "exists":
+        bot.reply_to(message, f"✅ ECID `{ecid}` is registered")
+    else:
+        bot.reply_to(message, f"❌ ECID `{ecid}` not found")
 
-# ================= DOWNLOAD =================
-@bot.message_handler(commands=['download'])
+
+# ---------- DOWNLOAD ----------
+@bot.message_handler(commands=["download"])
 def download(message):
-    if not in_group(message):
-        return
-
-    safe_reply(
-        message.chat.id,
-        "📥 Download:\n👉 https://www.mediafire.com/",
-        message.message_id
+    bot.reply_to(
+        message,
+        "📥 Download link:\n"
+        "👉 https://www.mediafire.com/file/sgw0wxk4fn6xgb8/PO+Tools+A12+.zip/file"
     )
 
-# ================= START =================
+
 bot.polling(none_stop=True)
+
