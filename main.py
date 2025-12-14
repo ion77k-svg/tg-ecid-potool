@@ -1,8 +1,7 @@
 import telebot
 import requests
-import time
 
-TOKEN = "ТВОЙ_BOT_TOKEN"
+TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
@@ -12,22 +11,32 @@ bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
 ADD_ECID_URL = "https://vanciu.atwebpages.com/add_ecid.php"
 CHECK_ECID_URL = "https://vanciu.atwebpages.com/check_ecid.php"
 
-# ---------- ЛИМИТ 24 ЧАСА ----------
-REGISTER_COOLDOWN = 24 * 60 * 60  # 24 часа
-last_register_time = {}  # user_id -> timestamp
 
-
-def add_ecid(ecid):
-    r = requests.get(ADD_ECID_URL, params={"ecid": ecid}, timeout=10)
-    return r.json()
+def add_ecid(ecid, user_id, is_admin=False):
+    try:
+        r = requests.get(
+            ADD_ECID_URL,
+            params={
+                "ecid": ecid,
+                "user_id": user_id,
+                "admin": "1" if is_admin else "0"
+            },
+            timeout=10
+        )
+        return r.json()
+    except:
+        return {"status": "error"}
 
 
 def check_ecid(ecid):
-    r = requests.get(CHECK_ECID_URL, params={"ecid": ecid}, timeout=10)
-    return r.json()
+    try:
+        r = requests.get(CHECK_ECID_URL, params={"ecid": ecid}, timeout=10)
+        return r.json()
+    except:
+        return {"status": "error"}
 
 
-# ---------- Новый пользователь ----------
+# ---------- NEW USER ----------
 @bot.message_handler(content_types=["new_chat_members"])
 def welcome(message):
     for user in message.new_chat_members:
@@ -40,13 +49,13 @@ def welcome(message):
             "✅ Fully compatible with Windows\n"
             "✅ Supports A12+ devices with iOS 15 through iOS 26.1\n"
             "✅ Automatically blocks OTA updates\n"
-            "💰 Its Full Free\n"
-            "📩 Please contact an admin if you have problems!\n\n"
+            "💰 It's fully free\n"
+            "📩 Contact an admin if you have issues!\n\n"
             "Download Links: /download"
         )
 
 
-# ---------- HELP (с именем) ----------
+# ---------- HELP ----------
 @bot.message_handler(commands=["help"])
 def help_cmd(message):
     name = message.from_user.first_name or "User"
@@ -73,38 +82,19 @@ def register(message):
         return
 
     ecid = parts[1].strip().upper()
-    user_id = message.from_user.id
-    username = message.from_user.username or ""
+    user = message.from_user
+    is_admin = (user.username or "").lower() == ADMIN_USERNAME.lower()
 
-    # --- ЛИМИТ (кроме создателя) ---
-    if username.lower() != ADMIN_USERNAME.lower():
-        now = time.time()
-        last_time = last_register_time.get(user_id)
-
-        if last_time and now - last_time < REGISTER_COOLDOWN:
-            remaining = int((REGISTER_COOLDOWN - (now - last_time)) / 3600)
-            bot.reply_to(
-                message,
-                f"⏳ You can register ECID again in ~{remaining} hour(s)"
-            )
-            return
-
-    # --- PHP регистрация ---
-    try:
-        result = add_ecid(ecid)
-    except:
-        bot.reply_to(message, "❌ Server error. Try later.")
-        return
+    result = add_ecid(ecid, user.id, is_admin)
 
     if result["status"] == "success":
-        last_register_time[user_id] = time.time()
         bot.reply_to(message, f"✅ ECID `{ecid}` registered")
-
     elif result["status"] == "exists":
         bot.reply_to(message, f"⚠️ ECID `{ecid}` already registered")
-
+    elif result["status"] == "limit":
+        bot.reply_to(message, "⏳ Limit reached: 1 ECID per 24 hours")
     else:
-        bot.reply_to(message, "❌ Error registering ECID")
+        bot.reply_to(message, "❌ Registration error")
 
 
 # ---------- CHECK ----------
@@ -119,17 +109,12 @@ def check(message):
         return
 
     ecid = parts[1].strip().upper()
-
-    try:
-        result = check_ecid(ecid)
-    except:
-        bot.reply_to(message, "❌ Server error")
-        return
+    result = check_ecid(ecid)
 
     if result["status"] == "exists":
         bot.reply_to(message, f"✅ ECID `{ecid}` is registered")
     else:
-        bot.reply_to(message, f"❌ ECID `{ecid}` not found")
+        bot.reply_to(message, f"❌ ECID `{ecid}` not registered")
 
 
 # ---------- DOWNLOAD ----------
@@ -143,4 +128,3 @@ def download(message):
 
 
 bot.polling(none_stop=True)
-
