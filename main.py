@@ -46,16 +46,17 @@ def can_register(user_id, username):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    reply(message, (
-        "🎉 Welcome to HG Tools!\n"
-        "Version 1.0 is now live!
-        "✅ Fully compatible with Windows
-        "✅ Supports A12+ devices with iOS 15 through iOS 26.1
-        "✅ Automatically blocks OTA updates
-        "💰 It's Full Free
-        "📩 Please contact an admin if you have problems!
-        "Download Links: /download"
-    ))
+    reply(message, """🎉 Welcome to HG Tools! /n
+
+Version 1.0 is now live!
+✅ Fully compatible with Windows
+✅ Supports A12+ devices with iOS 15 through iOS 26.1
+✅ Automatically blocks OTA updates
+💰 Its Full Free
+📩 Please contact an admin if you have problems!
+
+Download Links: /download
+""")
 
 @bot.message_handler(commands=['help'])
 def help_cmd(message):
