@@ -9,7 +9,7 @@ OWNER_USERNAME = "pounlock"
 bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook()
 
-# ================== DATABASE ==================
+# ================= DATABASE =================
 conn = sqlite3.connect("ecid.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -30,17 +30,32 @@ CREATE TABLE IF NOT EXISTS users (
 
 conn.commit()
 
-# ================== HELPERS ==================
+# ================= HELPERS =================
 def is_owner(message):
     return message.from_user.username == OWNER_USERNAME
 
 def in_group(message):
     return message.chat.id == GROUP_ID
 
-# ================== WELCOME ==================
+def safe_reply(chat_id, text, message_id=None, parse_mode=None):
+    try:
+        bot.send_message(
+            chat_id,
+            text,
+            reply_to_message_id=message_id,
+            parse_mode=parse_mode
+        )
+    except Exception:
+        bot.send_message(
+            chat_id,
+            text,
+            parse_mode=parse_mode
+        )
+
+# ================= WELCOME =================
 @bot.message_handler(content_types=['new_chat_members'])
 def welcome(message):
-    if message.chat.id != GROUP_ID:
+    if not in_group(message):
         return
 
     for user in message.new_chat_members:
@@ -62,7 +77,7 @@ Download Links: /download
             parse_mode="Markdown"
         )
 
-# ================== HELP ==================
+# ================= HELP =================
 @bot.message_handler(commands=['help'])
 def help_cmd(message):
     if not in_group(message):
@@ -74,7 +89,7 @@ def help_cmd(message):
         message.chat.id,
         f"""👋 *{name}*
 
-🖐 Bot usage:
+🖐 Bot commands:
 
 • Register ECID:
 `/register <ECID>`
@@ -88,7 +103,7 @@ def help_cmd(message):
         parse_mode="Markdown"
     )
 
-# ================== REGISTER ==================
+# ================= REGISTER =================
 @bot.message_handler(commands=['register'])
 def register(message):
     if not in_group(message):
@@ -96,10 +111,10 @@ def register(message):
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        bot.send_message(
+        safe_reply(
             message.chat.id,
             "❌ Format:\n`/register <ECID>`",
-            reply_to_message_id=message.message_id,
+            message.message_id,
             parse_mode="Markdown"
         )
         return
@@ -107,32 +122,32 @@ def register(message):
     ecid = parts[1].strip()
     user_id = message.from_user.id
 
-    # LIMIT 24H (except owner)
+    # 24h limit (except owner)
     if not is_owner(message):
         cursor.execute("SELECT last_register FROM users WHERE user_id=?", (user_id,))
         row = cursor.fetchone()
         if row:
             last_time = datetime.fromisoformat(row[0])
             if datetime.now() - last_time < timedelta(hours=24):
-                bot.send_message(
+                safe_reply(
                     message.chat.id,
                     "⏳ U can register only **1 ECID per 24 hours**.",
-                    reply_to_message_id=message.message_id,
+                    message.message_id,
                     parse_mode="Markdown"
                 )
                 return
 
-    # CHECK DUPLICATE ECID
+    # duplicate ECID check
     cursor.execute("SELECT ecid FROM ecids WHERE ecid=?", (ecid,))
     if cursor.fetchone():
-        bot.send_message(
+        safe_reply(
             message.chat.id,
             "⚠️ This ECID is already registered.",
-            reply_to_message_id=message.message_id
+            message.message_id
         )
         return
 
-    # INSERT ECID
+    # insert ECID
     cursor.execute(
         "INSERT INTO ecids (ecid, registered_at) VALUES (?, ?)",
         (ecid, datetime.now().isoformat())
@@ -145,14 +160,14 @@ def register(message):
 
     conn.commit()
 
-    bot.send_message(
+    safe_reply(
         message.chat.id,
-        f"✅ Registered `{ecid}` successfull!",
-        reply_to_message_id=message.message_id,
+        f"✅ Registered `{ecid}` successfully!",
+        message.message_id,
         parse_mode="Markdown"
     )
 
-# ================== CHECK ==================
+# ================= CHECK =================
 @bot.message_handler(commands=['check'])
 def check_ecid(message):
     if not in_group(message):
@@ -160,10 +175,10 @@ def check_ecid(message):
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        bot.send_message(
+        safe_reply(
             message.chat.id,
             "❌ Format:\n`/check <ECID>`",
-            reply_to_message_id=message.message_id,
+            message.message_id,
             parse_mode="Markdown"
         )
         return
@@ -171,29 +186,25 @@ def check_ecid(message):
     ecid = parts[1].strip()
 
     cursor.execute("SELECT ecid FROM ecids WHERE ecid=?", (ecid,))
-    if cursor.fetchone():
-        text = "✅ ECID is registered."
-    else:
-        text = "❌ ECID is not registered."
+    exists = cursor.fetchone() is not None
 
-    bot.send_message(
+    safe_reply(
         message.chat.id,
-        text,
-        reply_to_message_id=message.message_id
+        "✅ ECID is registered." if exists else "❌ ECID not registered.",
+        message.message_id
     )
 
-# ================== DOWNLOAD ==================
+# ================= DOWNLOAD =================
 @bot.message_handler(commands=['download'])
 def download(message):
     if not in_group(message):
         return
 
-    bot.send_message(
+    safe_reply(
         message.chat.id,
         "📥 Download:\n👉 https://www.mediafire.com/",
-        reply_to_message_id=message.message_id
+        message.message_id
     )
 
-# ================== START ==================
+# ================= START =================
 bot.polling(none_stop=True)
-
