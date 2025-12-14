@@ -26,8 +26,6 @@ def escape_markdown(text):
 
 # -------------------- Работа с API --------------------
 def add_ecid(ecid, user_id, is_admin=False):
-    if not ecid or not user_id:
-        return {"status": "error", "message": "Missing parameters"}
     try:
         r = requests.get(
             ADD_ECID_URL,
@@ -40,8 +38,6 @@ def add_ecid(ecid, user_id, is_admin=False):
         return {"status": "error", "message": str(e)}
 
 def check_ecid(ecid):
-    if not ecid:
-        return {"status": "error", "message": "Missing ECID"}
     try:
         r = requests.get(
             CHECK_ECID_URL,
@@ -52,6 +48,40 @@ def check_ecid(ecid):
         return r.json()
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# -------------------- NEW USER --------------------
+@bot.message_handler(content_types=["new_chat_members"])
+def welcome(message):
+    for user in message.new_chat_members:
+        name = user.first_name or "User"
+        bot.send_message(
+            message.chat.id,
+            f"*{escape_markdown(name)}* 👋\n\n"
+            "🎉 Welcome to HG Tools!\n"
+            "Version 1.0 is now live!\n"
+            "✅ Fully compatible with Windows\n"
+            "✅ Supports A12+ devices with iOS 15 through iOS 26.1\n"
+            "✅ Automatically blocks OTA updates\n"
+            "💰 It's fully free\n"
+            "📩 Contact an admin if you have issues!\n\n"
+            "Download Links: /download",
+            parse_mode="Markdown"
+        )
+
+# -------------------- HELP --------------------
+@bot.message_handler(commands=["help"])
+def help_cmd(message):
+    name = message.from_user.first_name or "User"
+    bot.send_message(
+        message.chat.id,
+        f"*{escape_markdown(name)}* 👋\n\n"
+        "📌 *Bot Commands*\n\n"
+        "• `/register ECID`\n"
+        "• `/check ECID`\n"
+        "• `/download`\n"
+        "• `/help`",
+        parse_mode="Markdown"
+    )
 
 # -------------------- REGISTER --------------------
 @bot.message_handler(commands=["register"])
@@ -68,7 +98,7 @@ def register(message):
 
     # ---------- Проверка формата ECID ----------
     if not re.fullmatch(r"[0-9A-F]{16,20}", ecid):
-        bot.reply_to(message, "❌ Invalid ECID format! Only Hex digit")
+        bot.reply_to(message, "❌ Invalid ECID format! Only Hex digits allowed")
         return
 
     user = message.from_user
@@ -99,4 +129,39 @@ def register(message):
         bot.reply_to(message, f"❌ Registration error: {message_text}", parse_mode="Markdown")
     else:
         bot.reply_to(message, f"❌ Unknown status: {message_text}", parse_mode="Markdown")
-й
+
+# -------------------- CHECK --------------------
+@bot.message_handler(commands=["check"])
+def check(message):
+    if message.chat.id != GROUP_ID:
+        return
+
+    parts = message.text.split(maxsplit=1)
+    if len(parts) != 2:
+        bot.reply_to(message, "❌ Format:\n/check ECID")
+        return
+
+    ecid = parts[1].strip().upper()
+    result = check_ecid(ecid)
+
+    status = result.get("status", "error")
+    message_text = escape_markdown(result.get("message", ""))
+
+    if status == "exists":
+        bot.reply_to(message, f"✅ Ecid {escape_markdown(ecid)} already registered", parse_mode="Markdown")
+    elif status == "error":
+        bot.reply_to(message, f"❌ Server error: {message_text}", parse_mode="Markdown")
+    else:
+        bot.reply_to(message, f"❌ Ecid `{escape_markdown(ecid)}` not registered", parse_mode="Markdown")
+
+# -------------------- DOWNLOAD --------------------
+@bot.message_handler(commands=["download"])
+def download(message):
+    bot.reply_to(
+        message,
+        "📥 Download link:\n"
+        "👉 App Will Released Soon 🕰️",
+        parse_mode="Markdown"
+    )
+
+bot.polling(none_stop=True)
