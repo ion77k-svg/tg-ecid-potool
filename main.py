@@ -5,7 +5,7 @@ TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
 GROUP_ID = -1003159585382
 ADMIN_USERNAME = "pounlock"
 
-bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
+bot = telebot.TeleBot(TOKEN)  # Без parse_mode, будем указывать отдельно при необходимости
 
 # ---------- PHP API ----------
 ADD_ECID_URL = "https://vanciu.atwebpages.com/add_ecid.php"
@@ -36,6 +36,16 @@ def check_ecid(ecid):
         return {"status": "error", "message": str(e)}
 
 
+# ---------- ФУНКЦИЯ ЭКРАНИРОВАНИЯ SPECIAL CHARACTERS ДЛЯ MARKDOWN ----------
+import re
+
+def escape_markdown(text):
+    if not text:
+        return ""
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
+
+
 # ---------- NEW USER ----------
 @bot.message_handler(content_types=["new_chat_members"])
 def welcome(message):
@@ -43,7 +53,7 @@ def welcome(message):
         name = user.first_name or "User"
         bot.send_message(
             message.chat.id,
-            f"*{name}* 👋\n\n"
+            f"*{escape_markdown(name)}* 👋\n\n"
             "🎉 Welcome to HG Tools!\n\n"
             "Version 1.0 is now live!\n"
             "✅ Fully compatible with Windows\n"
@@ -51,7 +61,8 @@ def welcome(message):
             "✅ Automatically blocks OTA updates\n"
             "💰 It's fully free\n"
             "📩 Contact an admin if you have issues!\n\n"
-            "Download Links: /download"
+            "Download Links: /download",
+            parse_mode="Markdown"
         )
 
 
@@ -61,12 +72,13 @@ def help_cmd(message):
     name = message.from_user.first_name or "User"
     bot.send_message(
         message.chat.id,
-        f"*{name}* 👋\n\n"
+        f"*{escape_markdown(name)}* 👋\n\n"
         "📌 *Bot Commands*\n\n"
         "• `/register ECID`\n"
         "• `/check ECID`\n"
         "• `/download`\n"
-        "• `/help`"
+        "• `/help`",
+        parse_mode="Markdown"
     )
 
 
@@ -78,7 +90,7 @@ def register(message):
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        bot.reply_to(message, "❌ Format:\n`/register ECID`")
+        bot.reply_to(message, "❌ Format:\n/register ECID")
         return
 
     ecid = parts[1].strip().upper()
@@ -87,12 +99,11 @@ def register(message):
 
     result = add_ecid(ecid, user.id, is_admin)
 
-    # ---------- Используем подробное сообщение сервера ----------
     status = result.get("status", "error")
-    message_text = result.get("message", "Unknown error")
+    message_text = escape_markdown(result.get("message", "Unknown error"))
 
     if status == "success":
-        bot.reply_to(message, f"✅ ECID `{ecid}` registered")
+        bot.reply_to(message, f"✅ ECID `{escape_markdown(ecid)}` registered")
     elif status == "exists":
         bot.reply_to(message, f"⚠️ {message_text}")
     elif status == "limit":
@@ -111,21 +122,21 @@ def check(message):
 
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        bot.reply_to(message, "❌ Format:\n`/check ECID`")
+        bot.reply_to(message, "❌ Format:\n/check ECID")
         return
 
     ecid = parts[1].strip().upper()
     result = check_ecid(ecid)
 
     status = result.get("status", "error")
-    message_text = result.get("message", "")
+    message_text = escape_markdown(result.get("message", ""))
 
     if status == "exists":
-        bot.reply_to(message, f"✅ ECID `{ecid}` is registered")
+        bot.reply_to(message, f"✅ ECID `{escape_markdown(ecid)}` is registered")
     elif status == "error":
         bot.reply_to(message, f"❌ Server error: {message_text}")
     else:
-        bot.reply_to(message, f"❌ ECID `{ecid}` not found")
+        bot.reply_to(message, f"❌ ECID `{escape_markdown(ecid)}` not found")
 
 
 # ---------- DOWNLOAD ----------
