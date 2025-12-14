@@ -2,7 +2,7 @@ import telebot
 import requests
 import re
 import urllib3
-import time 
+import time
 
 # -------------------- Настройки --------------------
 TOKEN = "8495656409:AAHK9Ll3JnKscLVQt1Iw0VF6qMT69iQHfEg"
@@ -27,6 +27,8 @@ def escape_markdown(text):
 
 # -------------------- Работа с API --------------------
 def add_ecid(ecid, user_id, is_admin=False):
+    if not ecid or not user_id:
+        return {"status": "error", "message": "Missing parameters"}
     try:
         r = requests.get(
             ADD_ECID_URL,
@@ -39,6 +41,8 @@ def add_ecid(ecid, user_id, is_admin=False):
         return {"status": "error", "message": str(e)}
 
 def check_ecid(ecid):
+    if not ecid:
+        return {"status": "error", "message": "Missing ECID"}
     try:
         r = requests.get(
             CHECK_ECID_URL,
@@ -84,8 +88,6 @@ def help_cmd(message):
         parse_mode="Markdown"
     )
 
-import re
-
 # -------------------- REGISTER --------------------
 last_register_time = {}  # user_id -> timestamp
 COOLDOWN = 24 * 60 * 60  # 24 часа
@@ -121,7 +123,11 @@ def register(message):
             hours = int(remaining // 3600)
             minutes = int((remaining % 3600) // 60)
             seconds = int(remaining % 60)
-            bot.reply_to(message, f"⏳ You can register a new ECID in **{hours}h {minutes}m {seconds}s**", parse_mode="Markdown")
+            bot.reply_to(
+                message,
+                f"⏳ You can register a new ECID in **{hours}h {minutes}m {seconds}s**",
+                parse_mode="Markdown"
+            )
             return
 
     # ---------- Регистрируем ECID ----------
@@ -136,12 +142,20 @@ def register(message):
     elif status == "exists":
         bot.reply_to(message, f"⚠️ ECID already Registered!", parse_mode="Markdown")
     elif status == "limit":
-        bot.reply_to(message, f"⏳ You can register 1 Ecid in 24H", parse_mode="Markdown")
+        # Получаем оставшееся время из ответа PHP, если сервер вернул его
+        remaining_seconds = result.get("remaining", COOLDOWN)
+        hours = int(remaining_seconds // 3600)
+        minutes = int((remaining_seconds % 3600) // 60)
+        seconds = int(remaining_seconds % 60)
+        bot.reply_to(
+            message,
+            f"⏳ You can register a new ECID in **{hours}h {minutes}m {seconds}s**",
+            parse_mode="Markdown"
+        )
     elif status == "error":
         bot.reply_to(message, f"❌ Registration error: {message_text}", parse_mode="Markdown")
     else:
         bot.reply_to(message, f"❌ Unknown status: {message_text}", parse_mode="Markdown")
-
 
 # -------------------- CHECK --------------------
 @bot.message_handler(commands=["check"])
